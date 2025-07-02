@@ -1,0 +1,5 @@
+packages:
+  - "packages/*"
+  - "nugu"
+  - "admin-bo"
+  - "admin-po"
