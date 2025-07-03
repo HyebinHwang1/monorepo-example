@@ -1,7 +1,7 @@
 export default {
   trailingComma: "all", // 마지막 요소 뒤에 쉼표 추가
-  tabWidth: 4, // 탭 너비 4
-  semi: false, // 세미콜론 제거
+  tabWidth: 2, // 탭 너비 4
+  semi: true, // 세미콜론 제거
   printWidth: 100, // 코드 줄 길이 100
   singleQuote: true, // 문자열은 홑 따옴표로 변환
   bracketSpacing: true, // 기본값. true인 경우 {foo:bar}는 { foo: bar }로 변환
