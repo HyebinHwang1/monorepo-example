@@ -1,0 +1,1 @@
+export { default } from "../packages/admin-ui/postcss.config.mjs";

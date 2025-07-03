@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
-import './App.css';
-import { MyComponents } from 'admin-ui';
+import { Button } from '@admin-ui/components/button';
 
 export default function App() {
   useEffect(() => {
@@ -9,10 +8,10 @@ export default function App() {
 
   return (
     <>
+      <div className="text-red-500">kkkkk</div>
       <div>123</div>
-      <MyComponents />
+      <Button>123</Button>
       <div>123</div>
-      <div>123</div>
-    </>
+    </> 
   );
 }

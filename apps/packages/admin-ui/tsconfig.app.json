@@ -15,6 +15,10 @@
     "moduleDetection": "force",
     "jsx": "react-jsx",
     "noEmit": false,
+    "baseUrl": ".",
+    "paths": {
+      "@admin-ui/*": ["./src/*"] 
+    },
 
     /* Linting */
     "strict": true,
@@ -23,5 +27,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"],
+  "include": ["src"]
 }
