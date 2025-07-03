@@ -8,10 +8,7 @@ export default function App() {
 
   return (
     <>
-      <div className="text-red-500">kkkkk</div>
-      <div>123</div>
       <Button>123</Button>
-      <div>123</div>
     </>
   );
 }
