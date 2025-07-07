@@ -1,0 +1,143 @@
+name: Verification Template
+
+on:
+  workflow_call:
+    inputs:
+      PATH:
+        required: true
+        type: string
+        description: "Path to the service directory (e.g., server/services/product/search)"
+      NAME:
+        required: true
+        type: string
+        description: "Service name for display"
+      GO_VERSION:
+        required: false
+        type: string
+        default: "1.24.3"
+        description: "Go version to use"
+    secrets:
+      GH_APP_ID:
+        required: true
+      GH_APP_PRIVATE_KEY:
+        required: true
+      GH_APP_INSTALLATION_ID:
+        required: true
+
+jobs:
+  verify-go-module:
+    name: Verify Go Module - ${{ inputs.NAME }}
+    runs-on: arc-runner-set
+    container:
+      image: public.ecr.aws/mediquitous/bundle-image:15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.GO_VERSION }}
+          cache: true
+          cache-dependency-path: |
+            server/go.work.sum
+            ${{ inputs.PATH }}/go.sum
+
+      - name: Cache Go tools
+        id: tools-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin
+          key: ${{ runner.os }}-go-tools-${{ inputs.GO_VERSION }}-v1
+          restore-keys: |
+            ${{ runner.os }}-go-tools-${{ inputs.GO_VERSION }}-
+            ${{ runner.os }}-go-tools-
+
+      - name: Install Go tools
+        if: steps.tools-cache.outputs.cache-hit != 'true'
+        run: |
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.6
+
+      - name: Setup golangci-lint cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/golangci-lint
+            ~/.cache/go-build
+          key: ${{ runner.os }}-golangci-lint-${{ inputs.GO_VERSION }}-${{ hashFiles('**/.golangci.yaml') }}-${{ hashFiles(format('{0}/**/*.go', inputs.PATH)) }}
+          restore-keys: |
+            ${{ runner.os }}-golangci-lint-${{ inputs.GO_VERSION }}-${{ hashFiles('**/.golangci.yaml') }}-
+            ${{ runner.os }}-golangci-lint-${{ inputs.GO_VERSION }}-
+            ${{ runner.os }}-golangci-lint-
+
+      - name: Setup test cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/go-build
+          key: ${{ runner.os }}-go-build-${{ inputs.GO_VERSION }}-${{ hashFiles(format('{0}/**/go.sum', inputs.PATH), format('{0}/**/*.go', inputs.PATH)) }}
+          restore-keys: |
+            ${{ runner.os }}-go-build-${{ inputs.GO_VERSION }}-
+            ${{ runner.os }}-go-build-
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.PATH }}
+        run: |
+          go mod download
+          go mod tidy
+
+      - name: Validate Go module dependencies
+        working-directory: ${{ inputs.PATH }}
+        run: |
+          go mod verify
+
+      - name: Run check
+        working-directory: ${{ inputs.PATH }}
+        shell: bash
+        env:
+          GOFLAGS: -buildvcs=false
+        run: |
+          set -euo pipefail
+
+          mkdir -p /tmp/logs
+
+          echo "Run Lint..."
+          (golangci-lint run --config=${GITHUB_WORKSPACE}/server/.golangci.yaml ./... 2>&1 | tee /tmp/logs/lint.log; echo $? > /tmp/lint.exit) &
+          LINT_PID=$!
+
+          echo "Run Test..."
+          (go test -v -race -coverprofile=coverage.out ./... 2>&1 | tee /tmp/logs/test.log; echo $? > /tmp/test.exit) &
+          TEST_PID=$!
+
+          wait $LINT_PID
+          wait $TEST_PID
+
+          LINT_EXIT=$(cat /tmp/lint.exit)
+          TEST_EXIT=$(cat /tmp/test.exit)
+
+          echo ""
+          echo "Verification Results:"
+          echo "Lint: $([ $LINT_EXIT -eq 0 ] && echo "✅ PASSED" || echo "❌ FAILED")"
+          echo "Tests: $([ $TEST_EXIT -eq 0 ] && echo "✅ PASSED" || echo "❌ FAILED")"
+          echo ""
+
+          if [ $LINT_EXIT -ne 0 ]; then
+            echo "❌ Lint check failed:"
+            echo "----------------------------------------"
+            cat /tmp/logs/lint.log
+            echo "----------------------------------------"
+            echo ""
+          fi
+          if [ $TEST_EXIT -ne 0 ]; then
+            echo "❌ Tests failed:"
+            echo "----------------------------------------"
+            cat /tmp/logs/test.log
+            echo "----------------------------------------"
+            echo ""
+          fi
+
+          if [ $LINT_EXIT -ne 0 ] || [ $TEST_EXIT -ne 0 ]; then
+            echo "❌ Verification failed - Please check the logs above"
+            exit 1
+          fi
+          echo "✅ All verification checks passed successfully."

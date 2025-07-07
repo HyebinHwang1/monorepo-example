@@ -1,0 +1,56 @@
+name: Verify Front Modules
+
+on:
+  workflow_call:
+      inputs:
+        PATH:
+          required: true
+          type: string
+          description: "Path to the module directory (e.g., apps/nugu)"
+        NAME:
+          required: true
+          type: string
+          description: "Module name for display"
+      secrets:
+        GH_APP_ID:
+          required: true
+        GH_APP_PRIVATE_KEY:
+          required: true
+        GH_APP_INSTALLATION_ID:
+          required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        node-version: [20]
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Change to the apps directory 
+      run: |
+        cd apps
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'pnpm'
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Run checks
+      run: |
+          pnpm turbo lint
+          pnpm turbo typecheck  
+          pnpm turbo test
+          pnpm turbo build
+
+  

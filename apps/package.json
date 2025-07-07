@@ -13,7 +13,6 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@nugu/eslint-config": "workspace:*",
     "turbo": "^2.5.4"
   }
 }

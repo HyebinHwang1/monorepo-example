@@ -1,0 +1,94 @@
+name: Verify Changed Modules
+
+on:
+  pull_request:
+    paths:
+      - "**"
+
+jobs:
+  detect-modified-modules:
+    name: Detect Modified Modules
+    runs-on: ubuntu-latest
+
+    outputs:
+      go-matrix: ${{ steps.set-matrix.outputs.go-matrix }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            # Front Production
+            nugu: 'apps/nugu/**'
+            admin-bo:'apps/admin-bo/**'
+            admin-po:'apps/admin-po/**'
+
+            # Front Packages
+            admin-ui:'apps/packages/admin-ui/**'
+
+      - name: Build matrix
+        id: set-matrix
+        shell: bash
+        run: |
+          front_modules=()
+
+          # Front Modules
+          [[ "${{ steps.filter.outputs.nugu }}" == "true" ]] && front_modules+=('{"path":"apps/nugu","name":"nugu"}')
+          [[ "${{ steps.filter.outputs.admin-bo }}" == "true" ]] && front_modules+=('{"path":"apps/admin-bo","name":"admin-bo"}')
+          [[ "${{ steps.filter.outputs.admin-po }}" == "true" ]] && front_modules+=('{"path":"apps/admin-po","name":"admin-po"}')
+          [[ "${{ steps.filter.outputs.admin-ui }}" == "true" ]] && front_modules+=('{"path":"apps/packages/admin-ui","name":"admin-ui"}')
+
+          # Set Front matrix
+          if [ ${#front_modules[@]} -eq 0 ]; then
+            echo "front-matrix=[]" >> $GITHUB_OUTPUT
+          else
+            front_matrix_json="[$(IFS=','; echo "${front_modules[*]}")]"
+            echo "front-matrix=$front_matrix_json" >> $GITHUB_OUTPUT
+          fi
+
+
+  verify-front-modules:
+    name: Verify Front Modules
+    needs: detect-modified-modules
+    if: needs.detect-modified-modules.outputs.front-matrix != '[]'
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.detect-modified-modules.outputs.front-matrix) }}
+    uses: ./.github/workflows/verify-front-modules.yaml
+    with:
+      PATH: ${{ matrix.path }}
+      NAME: ${{ matrix.name }}
+    secrets: inherit
+
+
+  verification:
+    name: All Verifications Passed
+    runs-on: ubuntu-latest
+    needs:
+      - verify-front-modules
+    if: always()
+    steps:
+      - name: Check all verifications
+        run: |
+          echo "Front Modules Result: ${{ needs.verify-front-modules.result }}"
+
+          # 실패한 job이 있는지 확인
+          if [[ "${{ needs.verify-front-modules.result }}" == "failure" ]]; then
+            echo "❌ Some verifications failed"
+            exit 1
+          fi
+
+          # 취소된 job이 있는지 확인  
+          if [[ "${{ needs.verify-front-modules.result }}" == "cancelled" ]]; then
+            echo "⚠️ Some verifications were cancelled"
+            exit 1
+          fi
+
+          # 성공 또는 스킵된 경우
+          if [[ "${{ needs.verify-front-modules.result }}" == "skipped" ]]; then
+            echo "ℹ️ No changes detected, verification skipped"
+          else
+            echo "✅ All verifications passed"
+          fi
