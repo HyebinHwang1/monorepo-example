@@ -11,14 +11,7 @@ on:
           required: true
           type: string
           description: "Module name for display"
-      secrets:
-        GH_APP_ID:
-          required: true
-        GH_APP_PRIVATE_KEY:
-          required: true
-        GH_APP_INSTALLATION_ID:
-          required: true
-
+          
 jobs:
   build:
     runs-on: ubuntu-22.04
