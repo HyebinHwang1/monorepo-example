@@ -8,7 +8,6 @@ export default function App() {
 
   return (
     <>
-      <Button variant="outline">TEST</Button>
       <Button>123</Button>
     </>
   );
