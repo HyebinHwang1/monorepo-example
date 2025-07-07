@@ -20,13 +20,14 @@ jobs:
         id: filter
         with:
           filters: |
-            # Front Production
-            nugu: 'apps/nugu/**'
-            admin-bo:'apps/admin-bo/**'
-            admin-po:'apps/admin-po/**'
-
-            # Front Packages
-            admin-ui:'apps/packages/admin-ui/**'
+            nugu:
+              - 'apps/nugu/**'
+            admin-bo:
+              - 'apps/admin-bo/**'
+            admin-po:
+              - 'apps/admin-po/**'
+            admin-ui:
+              - 'apps/packages/admin-ui/**'
 
       - name: Build matrix
         id: set-matrix
