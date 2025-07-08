@@ -102,11 +102,9 @@ jobs:
           if: needs.deploy-front-service.result == 'success'
           run: |
             echo "빌드 성공 확인"
-            exit 1 
       
       # 빌드 실패 시 메시지를 Slack을 통해 발송
         - name: Failure 
           if: needs.deploy-front-service.result == 'failure'
           run: |
             echo "빌드 실패 확인"
-            exit 1 
