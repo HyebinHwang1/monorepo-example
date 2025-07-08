@@ -9,7 +9,8 @@
     "build": "pnpm exec tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "prettier": "prettier --write \"**/*.{js,jsx,ts,tsx,css,html}\""
+    "prettier": "prettier --write \"**/*.{js,jsx,ts,tsx,css,html}\"",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@admin-ui": "workspace:*",
