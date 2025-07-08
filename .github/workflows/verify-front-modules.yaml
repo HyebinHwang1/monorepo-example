@@ -15,20 +15,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: apps
+
     strategy:
       matrix:
         node-version: [20]
     steps:
     - uses: actions/checkout@v4
 
-    - name: Change to the apps directory 
-      run: |
-        cd apps
-
     - name: Cache turbo build setup
       uses: actions/cache@v4
       with:
-        path: .turbo
+        path: apps/.turbo
         key: ${{ runner.os }}-turbo-${{ github.sha }}
         restore-keys: |
             ${{ runner.os }}-turbo-
@@ -43,10 +43,10 @@ jobs:
       with:
         node-version: 20
         cache: 'pnpm'
-
+        cache-dependency-path: 'apps/pnpm-lock.yaml'
 
     - name: Install dependencies
-      run: pnpm install --frozen-lockfile
+      run: pnpm install
 
     - name: Run checks
       run: |
