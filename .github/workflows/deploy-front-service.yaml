@@ -45,24 +45,19 @@ jobs:
         with:
           node-version: 20
           cache: 'pnpm'
-          cache-dependency-path: '${{ inputs.PATH }}/pnpm-lock.yaml'
+          cache-dependency-path: 'pnpm-lock.yaml'
   
       - name: Install dependencies
+        working-directory: ${{ inputs.PATH }}
         run: pnpm install
   
       - name: Run checks
+        working-directory: ${{ inputs.PATH }}
         run: |
-            pnpm turbo lint
-            pnpm turbo check-types  
-            pnpm turbo build
+          pnpm turbo lint --filter=${{ inputs.TARGET }}
+          pnpm turbo check-types --filter=${{ inputs.TARGET }}
+          pnpm turbo build --filter=${{ inputs.TARGET }}
 
-      # GitOps Repository Source Clone
-      - name: Clone GitOps repository
-        uses: actions/checkout@v4
-        with:
-          repository: 'mediquitous-dev/gitops'
-          token: ${{ secrets.ENV_GITHUB_TOKEN }}
-          path: gitops
 
       # 빌드 성공일 때 GitHub Deployments 성공 업데이트
       - name: Update deployment status (success)
