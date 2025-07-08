@@ -54,8 +54,6 @@ jobs:
       - name: Run checks
         working-directory: ${{ inputs.PATH }}
         run: |
-          pnpm turbo lint 
-          pnpm turbo check-types 
-          pnpm turbo build --affected
+          pnpm turbo lint check-types build --affected 
 
 
