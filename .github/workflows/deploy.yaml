@@ -24,7 +24,7 @@ on:
         options:
           - admin-bo
           - admin-po
-          - packages
+          - admin-ui
           - nugu
       STRATEGY:
         type: choice
@@ -53,7 +53,7 @@ jobs:
           TARGET_MAP='{
             "admin-bo": "apps/admin-bo",
             "admin-po": "apps/admin-po",
-            "packages": "apps/packages",
+            "admin-ui": "apps/packages/admin-ui",
             "nugu": "apps/nugu"
           }'
 
@@ -80,7 +80,7 @@ jobs:
     if: |
       inputs.TARGET == 'admin-bo' ||
       inputs.TARGET == 'admin-po' ||
-      inputs.TARGET == 'packages' ||
+      inputs.TARGET == 'admin-ui' ||
       inputs.TARGET == 'nugu'
     needs: [start-notification, prepare]
     uses: ./.github/workflows/deploy-front-service.yaml
