@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      go-matrix: ${{ steps.set-matrix.outputs.go-matrix }}
+      front-matrix: ${{ steps.set-matrix.outputs.front-matrix }}
 
     steps:
       - uses: actions/checkout@v4
