@@ -74,7 +74,6 @@ jobs:
       - name: Start Notification
         run: |
           echo "빌드 시작 확인" 
-          exit 1 
 
   # Go 빌드 및 배포
   deploy-front-service:
