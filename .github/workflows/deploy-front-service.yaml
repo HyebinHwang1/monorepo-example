@@ -1,0 +1,99 @@
+name: Front Service Deploy
+
+on:
+  workflow_call:
+    inputs:
+      ENV:
+        type: string
+        description: '환경을 선택해주세요.'
+        required: true
+      TARGET:
+        type: string
+        description: "타겟을 선택해주세요."
+        required: true
+      PATH:
+        type: string
+        description: "경로를 선택해주세요."
+        required: true
+      GO_VERSION:
+        required: false
+        type: string
+        default: '1.24.3'
+        description: 'Go version to use'
+      STRATEGY:
+        type: string
+        description: '전략을 선택하세요 (blue-green or canary)'
+        required: true
+        default: 'blue-green'
+      CANARY:
+        type: string
+        description: |
+          Canary 배포 시 적용할 비중(%)을 입력해주세요.
+          (예: 10, 25, 30 등등)
+        default: '25'
+
+run-name: "${{ inputs.TARGET }} Deploy to ${{ inputs.ENV }}"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 코드 클론
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache turbo build setup
+        id: turbo-cache
+        uses: actions/cache@v4
+        with:
+          path: '${{ inputs.PATH }}/.turbo'
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+              ${{ runner.os }}-turbo-
+  
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+  
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: '${{ inputs.PATH }}/pnpm-lock.yaml'
+  
+      - name: Install dependencies
+        run: pnpm install
+  
+      - name: Run checks
+        run: |
+            pnpm turbo lint
+            pnpm turbo check-types  
+            pnpm turbo build
+
+      # GitOps Repository Source Clone
+      - name: Clone GitOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: 'mediquitous-dev/gitops'
+          token: ${{ secrets.ENV_GITHUB_TOKEN }}
+          path: gitops
+
+      # 빌드 성공일 때 GitHub Deployments 성공 업데이트
+      - name: Update deployment status (success)
+        if: success()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: '${{ github.token }}'
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: 'success'
+
+      # 빌드 실패일 때 GitHub Deployments 실패 업데이트
+      - name: Update deployment status (failure)
+        if: failure()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: '${{ github.token }}'
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: 'failure'

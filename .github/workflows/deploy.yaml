@@ -1,0 +1,114 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      ENV:
+        type: choice
+        description: '배포 환경을 선택해주세요.'
+        required: true
+        default: dev
+        options:
+          - dev
+          - qa
+          - prod
+          - qa1
+          - qa2
+          - qa3
+          - qa4
+          - qa5
+      TARGET:
+        type: choice
+        description: "배포 타겟을 선택해주세요."
+        required: true
+        options:
+          - admin-bo
+          - admin-po
+          - packages
+          - nugu
+      STRATEGY:
+        type: choice
+        description: '배포 전략을 선택하세요 (blue-green or canary)'
+        required: true
+        default: 'blue-green'
+        options:
+          - blue-green
+          - canary
+      CANARY:
+        type: number
+        description: |
+          Canary 배포 시 적용할 비중(%)을 입력해주세요.
+          (예: 10, 25, 30 등등)
+        default: 25
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      path: ${{ steps.service.outputs.path }}
+    steps:
+      - name: Map TARGET to service type and path
+        id: service
+        run: |
+          TARGET_MAP='{
+            "admin-bo": "apps/admin-bo",
+            "admin-po": "apps/admin-po",
+            "packages": "apps/packages",
+            "nugu": "apps/nugu"
+          }'
+
+          PATH=$(echo "$TARGET_MAP" | jq -r '.["${{ inputs.TARGET }}"]')
+
+          if [ "$PATH" = "null" ]; then
+            echo "Unknown target: ${{ inputs.TARGET }}"
+            exit 1
+          fi
+
+          echo "path=$PATH" >> $GITHUB_OUTPUT
+          echo "Mapped ${{ inputs.TARGET }} to path: $PATH"
+
+  # 시작 알림
+  start-notification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start Notification
+        run: |
+          echo "빌드 시작 확인" 
+          exit 1 
+
+  # Go 빌드 및 배포
+  deploy-go-service:
+    if: |
+      inputs.TARGET == 'admin-bo' ||
+      inputs.TARGET == 'admin-po' ||
+      inputs.TARGET == 'packages' ||
+      inputs.TARGET == 'nugu'
+    needs: [start-notification, prepare]
+    uses: ./.github/workflows/deploy-front-service.yaml
+    with:
+      ENV: ${{ inputs.ENV }}
+      TARGET: ${{ inputs.TARGET }}
+      PATH: ${{ needs.prepare.outputs.path }}
+      STRATEGY: ${{ inputs.STRATEGY }}
+    secrets: inherit
+
+  # 최종 알림
+  final-notification:
+    runs-on: ubuntu-latest
+    needs: [deploy-go-service]
+    if: always() && (needs.deploy-go-service.result != 'skipped')
+
+    steps:
+        # 빌드 성공 시 메시지를 Slack을 통해 발송
+        - name: Success 
+          if: needs.deploy-go-service.result == 'success'
+          run: |
+            echo "빌드 성공 확인"
+            exit 1 
+      
+      # 빌드 실패 시 메시지를 Slack을 통해 발송
+        - name: Failure 
+          if: needs.deploy-go-service.result == 'failure'
+          run: |
+            echo "빌드 실패 확인"
+            exit 1 
