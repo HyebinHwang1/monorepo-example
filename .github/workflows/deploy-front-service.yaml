@@ -54,25 +54,7 @@ jobs:
       - name: Run checks
         working-directory: ${{ inputs.PATH }}
         run: |
-          pnpm turbo lint --filter=${{ inputs.TARGET }}
-          pnpm turbo check-types --filter=${{ inputs.TARGET }}
-          pnpm turbo build --filter=${{ inputs.TARGET }}
+          pnpm turbo lint 
+          pnpm turbo check-types 
+          pnpm turbo build 
 
-
-      # 빌드 성공일 때 GitHub Deployments 성공 업데이트
-      - name: Update deployment status (success)
-        if: success()
-        uses: chrnorm/deployment-status@v2
-        with:
-          token: '${{ github.token }}'
-          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
-          state: 'success'
-
-      # 빌드 실패일 때 GitHub Deployments 실패 업데이트
-      - name: Update deployment status (failure)
-        if: failure()
-        uses: chrnorm/deployment-status@v2
-        with:
-          token: '${{ github.token }}'
-          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
-          state: 'failure'
